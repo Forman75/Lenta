@@ -1,0 +1,68 @@
+# ============================================================
+#  Конфигурация пайплайна Lenta Pricer
+# ============================================================
+
+# --- Препроцессинг видео ------------------------------------
+video:
+  target_fps: 2.5           # Целевой FPS сэмплирования (2-3 оптимально)
+  blur_threshold: 60.0      # Минимальная Laplacian variance (меньше → смазано)
+  resize_width: 1920        # Ресайз кадра до этой ширины (None = без ресайза)
+  apply_undistort: true     # Применить undistortion (коэф. от заказчика)
+  max_frames: null          # null = всё видео, иначе лимит для отладки
+
+# --- Параметры камеры (из example_undistort.py заказчика) ---
+camera:
+  image_size: [3840, 2160]
+  diagonal_mm: 5.714286     # 16.0 / 2.8
+  focal_length_mm: 2.8
+  distortion_coeffs: [-0.276, 0.06, 0.0084, -0.0016, -0.0044]  # k1,k2,p1,p2,k3
+
+# --- Детектор ценников --------------------------------------
+detector:
+  weights_path: "models/yolov8s_pricetag.pt"   # Дообученные веса
+  fallback_weights: "yolov8s.pt"               # Если своих нет — generic
+  imgsz: 1280               # Размер инференса (640/960/1280)
+  conf_threshold: 0.35
+  iou_threshold: 0.5
+  device: "cuda:0"
+  half: true                # FP16 на RTX 3060 — экономит VRAM
+  tracker_config: "bytetrack.yaml"   # ultralytics встроенный
+
+# --- Селектор лучших кадров по треку ------------------------
+track_selector:
+  top_k: 1                  # Сколько лучших кадров отдавать в VLM
+  min_track_length: 2       # Трек короче — игнор (шум детектора)
+  min_bbox_area: 4000       # Слишком маленькие ценники (px²) — игнор
+  min_aspect_ratio: 0.4     # Защита от вытянутых ложных детекций
+  max_aspect_ratio: 2.5
+  edge_margin: 20           # Отступ от края кадра — ценник у края обрезан
+
+# --- VLM (Qwen2-VL-2B квантованная) -------------------------
+vlm:
+  model_id: "Qwen/Qwen2-VL-2B-Instruct"
+  cache_dir: "models/hf_cache"
+  load_in_4bit: true        # На RTX 3060 — обязательно
+  max_new_tokens: 512
+  temperature: 0.0          # Детерминированно (это OCR, не творчество)
+  min_pixels: 256 * 28 * 28  # Динамические resolution settings Qwen2-VL
+  max_pixels: 1280 * 28 * 28
+
+# --- QR-декодер ---------------------------------------------
+qr:
+  enable_upscale_fallback: true    # При неудаче — ресайз и повтор
+  upscale_factor: 2.0
+  enable_cv2_fallback: true        # Если pyzbar не нашёл — cv2.QRCodeDetector
+
+# --- Справочник товаров (db_hack.csv от заказчика) ----------
+product_db:
+  enabled: true
+  csv_path: "data/db_hack.csv"        # путь к справочнику
+  encoding: "cp1251"                  # кодировка CSV (заказчик прислал в cp1251)
+
+# --- Выходные данные ----------------------------------------
+output:
+  csv_dir: "output"
+  save_crops: false         # Сохранять crop'ы для дебага
+  save_debug_frames: false  # Сохранять кадры с отрисовкой
+  not_present_marker: "нет"  # Из ТЗ: поля без значения = "нет"
+  not_recognized_marker: ""  # Из ТЗ: не распознано = пустое

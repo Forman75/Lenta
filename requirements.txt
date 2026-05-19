@@ -1,0 +1,45 @@
+# ============================================================
+#  Lenta Pricer — Production Requirements
+# ============================================================
+#  Установка PyTorch (CUDA 12.1) ОТДЕЛЬНО до этого файла:
+#  pip install torch==2.3.1 torchvision==0.18.1 --index-url \
+#      https://download.pytorch.org/whl/cu121
+# ============================================================
+
+# --- Computer Vision ----------------------------------------
+opencv-python-headless
+numpy
+Pillow
+
+# --- Detection + Tracking (YOLO + ByteTrack встроен) --------
+ultralytics        # YOLOv8/v10 + ByteTrack из коробки
+lap                # Линейное назначение для трекера
+
+# --- QR / штрихкоды -----------------------------------------
+pyzbar               # Требует системного libzbar0
+qrcode               # Опционально, для тестов
+
+# --- VLM (квантованная) -------------------------------------
+transformers        # Поддержка Qwen2-VL
+accelerate
+bitsandbytes        # 4-bit / 8-bit квантизация
+qwen-vl-utils        # process_vision_info для Qwen2-VL
+sentencepiece
+einops
+
+# --- Web UI -------------------------------------------------
+streamlit
+streamlit-webrtc    # На будущее (live-стрим)
+
+# --- Утилиты ------------------------------------------------
+pydantic          # Валидация схем
+pydantic-settings
+PyYAML
+pandas
+tqdm
+loguru            # Удобное логирование
+python-dateutil
+
+# --- Опционально для производительности ---------------------
+# onnxruntime-gpu==1.19.2    # Если переводим YOLO в ONNX
+# rknn-toolkit2              # Для оптимизации int8 (Rockchip),
